@@ -1,2 +1,5 @@
+<<<<<<< HEAD
 A tiger walks in the forest, photorealistic, 4k, high definition
+=======
+>>>>>>> 391a91b29915ea9555f5e7fe5ebfa3e61a8e6bc6
 A boat moving on the sea, flowers and grassland on the shore
