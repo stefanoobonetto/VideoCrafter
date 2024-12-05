@@ -23,7 +23,7 @@ def get_parser():
     parser.add_argument("--config", type=str, help="config (yaml) path")
     parser.add_argument("--prompt_file", type=str, default=None, help="a text file containing many prompts")
     parser.add_argument("--savedir", type=str, default=None, help="results saving path")
-    parser.add_argument("--savefps", type=str, default=10, help="video fps to generate")
+    parser.add_argument("--savefps", type=int, default=10, help="video fps to generate")
     parser.add_argument("--n_samples", type=int, default=1, help="num of samples per prompt",)
     parser.add_argument("--ddim_steps", type=int, default=50, help="steps of ddim if positive, otherwise use DDPM",)
     parser.add_argument("--ddim_eta", type=float, default=1.0, help="eta for ddim sampling (0.0 yields deterministic sampling)",)
@@ -121,8 +121,10 @@ def run_inference(args, gpu_num, gpu_no, **kwargs):
         ## inference
         batch_samples = batch_ddim_sampling(model, cond, noise_shape, args.n_samples, \
                                                 args.ddim_steps, args.ddim_eta, args.unconditional_guidance_scale, **kwargs)
+        
+        print(f"Shape of batch_samples: {batch_samples.shape}")
         ## b,samples,c,t,h,w
-        save_videos(batch_samples, args.savedir, filenames, fps=args.savefps)
+        save_videos(batch_samples[:, 0], args.savedir, filenames, fps=int(args.savefps))
 
     print(f"Saved in {args.savedir}. Time used: {(time.time() - start):.2f} seconds")
 

@@ -177,18 +177,39 @@ def load_image_batch(filepath_list, image_size=(256,256)):
         batch_tensor.append(img_tensor)
     return torch.stack(batch_tensor, dim=0)
 
-
 def save_videos(batch_tensors, savedir, filenames, fps=10):
-    # b,samples,c,t,h,w
-    n_samples = batch_tensors.shape[1]
-    for idx, vid_tensor in enumerate(batch_tensors):
-        video = vid_tensor.detach().cpu()
-        video = torch.clamp(video.float(), -1., 1.)
-        video = video.permute(2, 0, 1, 3, 4) # t,n,c,h,w
-        frame_grids = [torchvision.utils.make_grid(framesheet, nrow=int(n_samples)) for framesheet in video] #[3, 1*h, n*w]
-        grid = torch.stack(frame_grids, dim=0) # stack in temporal dim [t, 3, n*h, w]
-        grid = (grid + 1.0) / 2.0
-        grid = (grid * 255).to(torch.uint8).permute(0, 2, 3, 1)
-        savepath = os.path.join(savedir, f"{filenames[idx]}.mp4")
-        torchvision.io.write_video(savepath, grid, fps=fps, video_codec='h264', options={'crf': '10'})
+    os.makedirs(savedir, exist_ok=True)
 
+    fps = int(fps)  # Ensure FPS is an integer
+
+    if batch_tensors.dim() == 4:  # Handle single video without batch dimension
+        batch_tensors = batch_tensors.unsqueeze(0)  # Add batch dimension
+
+    for idx, vid_tensor in enumerate(batch_tensors):
+        print(f"Processing video {idx} with shape {vid_tensor.shape}")
+        
+        video = vid_tensor.detach().cpu()  # Move to CPU
+        print(f"Before permute: {video.shape}")
+
+        # Validate the tensor shape before permute
+        if video.dim() != 4 or video.size(0) != 3:
+            raise ValueError(f"Invalid tensor shape before permute: {video.shape}. Expected [C, T, H, W].")
+
+        video = video.permute(1, 2, 3, 0)  # [C, T, H, W] -> [T, H, W, C]
+        print(f"After permute: {video.shape}")
+
+        video = torch.clamp(video.float(), -1.0, 1.0)  # Clamp values to [-1, 1]
+        video = (video + 1.0) / 2.0  # Normalize to [0, 1]
+        video = (video * 255).to(torch.uint8)  # Scale to [0, 255]
+
+        # Validate tensor shape after permute
+        assert video.dim() == 4, f"Expected 4D tensor [T, H, W, C], got {video.dim()} dimensions"
+        assert video.size(-1) == 3, f"Expected 3 channels (RGB), got {video.size(-1)} channels"
+
+        savepath = os.path.join(savedir, f"{filenames[idx]}.mp4")
+        print(f"Saving video to {savepath} with shape {video.shape} and fps {fps}")
+
+        try:
+            torchvision.io.write_video(savepath, video, fps=fps, video_codec='h264')
+        except Exception as e:
+            print(f"Failed to save video {savepath}: {e}")
