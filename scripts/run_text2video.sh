@@ -1,12 +1,12 @@
 name="base_512_v2"
 
-ckpt='checkpoints/base_512_v2/model.ckpt'
-config='configs/inference_t2v_512_v2.0.yaml'
+ckpt='../checkpoints/base_512_v2/model.ckpt'
+config='../configs/inference_t2v_512_v2.0.yaml'
 
-prompt_file="prompts/test_prompts.txt"
+prompt_file="test_prompts.txt"
 res_dir="results"
 
-python3 scripts/evaluation/inference.py \
+python3 evaluation/inference.py \
 --seed 123 \
 --mode 'base' \
 --ckpt_path $ckpt \

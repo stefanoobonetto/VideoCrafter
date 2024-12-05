@@ -177,18 +177,32 @@ def load_image_batch(filepath_list, image_size=(256,256)):
         batch_tensor.append(img_tensor)
     return torch.stack(batch_tensor, dim=0)
 
-
 def save_videos(batch_tensors, savedir, filenames, fps=10):
-    # b,samples,c,t,h,w
-    n_samples = batch_tensors.shape[1]
+    """
+    Save batch video tensors as individual MP4 files.
+    Args:
+        batch_tensors: Tensor of shape [B, C, T, H, W]
+        savedir: Directory to save the videos
+        filenames: List of filenames to save videos as
+        fps: Frames per second for the videos
+    """
+    os.makedirs(savedir, exist_ok=True)
+    
+    # Iterate over each batch
     for idx, vid_tensor in enumerate(batch_tensors):
-        video = vid_tensor.detach().cpu()
-        video = torch.clamp(video.float(), -1., 1.)
-        video = video.permute(2, 0, 1, 3, 4) # t,n,c,h,w
-        frame_grids = [torchvision.utils.make_grid(framesheet, nrow=int(n_samples)) for framesheet in video] #[3, 1*h, n*w]
-        grid = torch.stack(frame_grids, dim=0) # stack in temporal dim [t, 3, n*h, w]
-        grid = (grid + 1.0) / 2.0
-        grid = (grid * 255).to(torch.uint8).permute(0, 2, 3, 1)
+        video = vid_tensor.detach().cpu()  # Move to CPU
+        video = torch.clamp(video.float(), -1.0, 1.0)  # Clamp values to [-1, 1]
+        
+        # Convert video tensor to [T, H, W, C] format
+        video = video.permute(2, 3, 4, 1)  # [B, C, T, H, W] -> [T, H, W, C]
+        video = (video + 1.0) / 2.0  # Normalize to [0, 1]
+        video = (video * 255).to(torch.uint8)  # Scale to [0, 255] for uint8
+        
+        # Save video to disk
         savepath = os.path.join(savedir, f"{filenames[idx]}.mp4")
-        torchvision.io.write_video(savepath, grid, fps=fps, video_codec='h264', options={'crf': '10'})
-
+        print(f"Saving video to {savepath} with shape {video.shape} and fps {fps}")
+        
+        try:
+            torchvision.io.write_video(savepath, video, fps=fps, video_codec='h264', options={'crf': '10'})
+        except Exception as e:
+            print(f"Failed to save video {savepath}: {e}")
